@@ -459,8 +459,8 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ## 👨‍💻 Autor
 
 **Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/LXRDSZN)
-- LinkedIn: [Tu Perfil](https://linkedin.com/in/)
+- GitHub: [@LXRDSZN](https://github.com/LXRDSZN)
+- LinkedIn: [](https://linkedin.com/in/)
 
 ---
 
