@@ -55,3 +55,39 @@ export const getSalesData = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener ventas', error: error.message });
   }
 };
+
+export const getDetailedStats = async (req, res) => {
+  try {
+    const stats = await analyticsService.getDetailedStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener estadísticas detalladas', error: error.message });
+  }
+};
+
+export const getCustomers = async (req, res) => {
+  try {
+    const customers = await csvService.getCustomers();
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener clientes', error: error.message });
+  }
+};
+
+export const getStores = async (req, res) => {
+  try {
+    const stores = await csvService.getStores();
+    res.json(stores);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener tiendas', error: error.message });
+  }
+};
+
+export const getPromotions = async (req, res) => {
+  try {
+    const promotions = await csvService.getPromotions();
+    res.json(promotions);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener promociones', error: error.message });
+  }
+};

@@ -1,4 +1,4 @@
-import csvService from './csvService.js';
+import csvService from '../services/csvService.js';
 
 class AnalyticsService {
   
@@ -30,7 +30,10 @@ class AnalyticsService {
         totalCustomers,
         totalProducts,
         averageTicket: parseFloat(averageTicket.toFixed(2)),
-        lowStockCount: lowStockItems.length
+        lowStockCount: lowStockItems.length,
+        totalOrders: sales.length,
+        totalStores: (await csvService.getStores()).length,
+        totalInventoryItems: inventory.length
       },
       charts: {
         salesByMonth,
@@ -175,6 +178,95 @@ class AnalyticsService {
       .map(([store, total]) => ({
         store,
         total: parseFloat(total.toFixed(2))
+      }));
+  }
+
+  async getDetailedStats() {
+    const [sales, products, inventory, customers, stores, promotions] = await Promise.all([
+      csvService.getSales(),
+      csvService.getProducts(),
+      csvService.getInventory(),
+      csvService.getCustomers(),
+      csvService.getStores(),
+      csvService.getPromotions()
+    ]);
+
+    // Análisis de clientes
+    const customersByGender = this.groupBy(customers, 'gender');
+    const customersByCity = this.groupBy(customers, 'city');
+    const customersByLoyalty = this.groupBy(customers, 'loyalty_segment');
+
+    // Análisis de ventas por canal
+    const salesByChannel = this.aggregateSales(sales, 'channel');
+    
+    // Análisis de descuentos
+    const avgDiscount = sales.reduce((sum, s) => sum + (s.discount_pct || 0), 0) / sales.length;
+    
+    // Análisis de inventario
+    const totalStock = inventory.reduce((sum, i) => sum + (i.stock_on_hand || 0), 0);
+    const lowStock = inventory.filter(i => i.stock_on_hand < i.reorder_point).length;
+
+    return {
+      totalRecords: {
+        sales: sales.length,
+        customers: customers.length,
+        products: products.length,
+        stores: stores.length,
+        inventoryItems: inventory.length,
+        promotions: promotions.length
+      },
+      customers: {
+        total: customers.length,
+        byGender: customersByGender,
+        byCity: customersByCity.slice(0, 10),
+        byLoyalty: customersByLoyalty
+      },
+      sales: {
+        total: sales.reduce((sum, s) => sum + (s.total_value || 0), 0),
+        avgDiscount: parseFloat(avgDiscount.toFixed(2)),
+        byChannel: salesByChannel
+      },
+      inventory: {
+        totalStock,
+        lowStockCount: lowStock,
+        totalItems: inventory.length
+      },
+      stores: {
+        total: stores.length,
+        byCity: this.groupBy(stores, 'city')
+      }
+    };
+  }
+
+  groupBy(array, key) {
+    const grouped = {};
+    array.forEach(item => {
+      const value = item[key] || 'Unknown';
+      grouped[value] = (grouped[value] || 0) + 1;
+    });
+    return Object.entries(grouped)
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, count]) => ({ name, count }));
+  }
+
+  aggregateSales(sales, key) {
+    const grouped = {};
+    sales.forEach(sale => {
+      const value = sale[key] || 'Unknown';
+      if (!grouped[value]) {
+        grouped[value] = { total: 0, quantity: 0, orders: 0 };
+      }
+      grouped[value].total += sale.total_value || 0;
+      grouped[value].quantity += sale.quantity || 0;
+      grouped[value].orders += 1;
+    });
+    return Object.entries(grouped)
+      .sort(([, a], [, b]) => b.total - a.total)
+      .map(([name, data]) => ({
+        name,
+        total: parseFloat(data.total.toFixed(2)),
+        quantity: data.quantity,
+        orders: data.orders
       }));
   }
 }
