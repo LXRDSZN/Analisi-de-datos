@@ -162,22 +162,45 @@ const formatNumber = (num) => {
 
 const loadDashboard = async () => {
   try {
+    console.log('🔄 Cargando dashboard...');
     const response = await axios.get('http://localhost:5000/api/analytics/dashboard', {
       withCredentials: true
     });
+    console.log('✅ Dashboard data:', response.data);
     dashboardData.value = response.data;
     
-    await nextTick();
-    createCharts();
+    console.log('📊 Charts data:', dashboardData.value.charts);
+    console.log('- Sales by month:', dashboardData.value.charts?.salesByMonth?.length);
+    console.log('- Top categories:', dashboardData.value.charts?.topCategories?.length);
+    console.log('- Top products:', dashboardData.value.charts?.topProducts?.length);
+    
     loading.value = false;
+    
+    await nextTick();
+    
+    // Esperamos un poco más para que el DOM esté completamente renderizado
+    setTimeout(() => {
+      console.log('🎨 Creating charts after timeout...');
+      console.log('- salesChart ref:', salesChart.value);
+      console.log('- categoriesChart ref:', categoriesChart.value);
+      console.log('- productsChart ref:', productsChart.value);
+      createCharts();
+      console.log('✅ Dashboard loaded successfully');
+    }, 100);
   } catch (error) {
-    console.error('Error loading dashboard:', error);
+    console.error('❌ Error loading dashboard:', error);
     loading.value = false;
   }
 };
 
 const createCharts = () => {
-  if (salesChart.value) {
+  console.log('🎨 Starting createCharts...');
+  console.log('- salesChart ref:', salesChart.value);
+  console.log('- categoriesChart ref:', categoriesChart.value);
+  console.log('- productsChart ref:', productsChart.value);
+  
+  if (salesChart.value && dashboardData.value.charts?.salesByMonth?.length > 0) {
+    console.log('📈 Creating sales chart...');
     const ctx = salesChart.value.getContext('2d');
     new Chart(ctx, {
       type: 'line',
@@ -186,36 +209,66 @@ const createCharts = () => {
         datasets: [{
           label: 'Ventas ($)',
           data: dashboardData.value.charts.salesByMonth.map(d => d.total),
-          borderColor: '#00d4ff',
-          backgroundColor: 'rgba(0, 212, 255, 0.1)',
+          borderColor: '#667eea',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          borderWidth: 3,
           tension: 0.4,
-          fill: true
+          fill: true,
+          pointBackgroundColor: '#667eea',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { 
             display: true,
-            labels: { color: '#8b9dc3' }
+            labels: { 
+              color: '#4a5568',
+              font: { size: 12, weight: 'bold' }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function(context) {
+                return 'Ventas: $' + context.parsed.y.toLocaleString('es-MX');
+              }
+            }
           }
         },
         scales: {
           y: {
-            ticks: { color: '#8b9dc3' },
-            grid: { color: 'rgba(139, 157, 195, 0.1)' }
+            beginAtZero: true,
+            ticks: { 
+              color: '#4a5568',
+              font: { size: 11 },
+              callback: function(value) {
+                return '$' + (value / 1000).toFixed(0) + 'K';
+              }
+            },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' }
           },
           x: {
-            ticks: { color: '#8b9dc3' },
-            grid: { color: 'rgba(139, 157, 195, 0.1)' }
+            ticks: { 
+              color: '#4a5568',
+              font: { size: 11 }
+            },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' }
           }
         }
       }
     });
   }
 
-  if (categoriesChart.value) {
+  if (categoriesChart.value && dashboardData.value.charts?.topCategories?.length > 0) {
     const ctx = categoriesChart.value.getContext('2d');
     new Chart(ctx, {
       type: 'doughnut',
@@ -224,24 +277,54 @@ const createCharts = () => {
         datasets: [{
           data: dashboardData.value.charts.topCategories.map(d => d.total),
           backgroundColor: [
-            '#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4',
-            '#ffeaa7', '#dfe6e9', '#74b9ff', '#a29bfe', '#fd79a8'
-          ]
+            '#667eea',
+            '#764ba2', 
+            '#f093fb',
+            '#4facfe',
+            '#43e97b',
+            '#fa709a',
+            '#fee140',
+            '#30cfd0',
+            '#a8edea',
+            '#fed6e3'
+          ],
+          borderColor: '#fff',
+          borderWidth: 3
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: { color: '#8b9dc3' }
+            position: 'right',
+            labels: { 
+              color: '#4a5568',
+              font: { size: 11, weight: 'bold' },
+              padding: 15,
+              boxWidth: 15
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function(context) {
+                const value = context.parsed;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return context.label + ': $' + value.toLocaleString('es-MX') + ' (' + percentage + '%)';
+              }
+            }
           }
         }
       }
     });
   }
 
-  if (productsChart.value) {
+  if (productsChart.value && dashboardData.value.charts?.topProducts?.length > 0) {
     const ctx = productsChart.value.getContext('2d');
     new Chart(ctx, {
       type: 'bar',
@@ -250,27 +333,50 @@ const createCharts = () => {
         datasets: [{
           label: 'Ventas ($)',
           data: dashboardData.value.charts.topProducts.map(d => d.total),
-          backgroundColor: 'rgba(0, 212, 255, 0.7)',
-          borderColor: '#00d4ff',
-          borderWidth: 1
+          backgroundColor: 'rgba(102, 126, 234, 0.8)',
+          borderColor: '#667eea',
+          borderWidth: 2,
+          borderRadius: 8
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
         plugins: {
           legend: { 
             display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function(context) {
+                return 'Ventas: $' + context.parsed.x.toLocaleString('es-MX');
+              }
+            }
           }
         },
         scales: {
-          y: {
-            ticks: { color: '#8b9dc3' },
-            grid: { color: 'rgba(139, 157, 195, 0.1)' }
-          },
           x: {
-            ticks: { color: '#8b9dc3' },
-            grid: { color: 'rgba(139, 157, 195, 0.1)' }
+            beginAtZero: true,
+            ticks: { 
+              color: '#4a5568',
+              font: { size: 11 },
+              callback: function(value) {
+                return '$' + (value / 1000).toFixed(0) + 'K';
+              }
+            },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+          },
+          y: {
+            ticks: { 
+              color: '#4a5568',
+              font: { size: 10 }
+            },
+            grid: { display: false }
           }
         }
       }
@@ -417,8 +523,8 @@ onMounted(() => {
 
 .chart-card canvas {
   width: 100% !important;
-  height: auto !important;
-  max-height: 350px;
+  height: 300px !important;
+  min-height: 300px;
 }
 
 /* Low Stock Section */
