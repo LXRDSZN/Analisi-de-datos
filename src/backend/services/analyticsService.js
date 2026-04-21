@@ -3,11 +3,12 @@ import csvService from '../services/csvService.js';
 class AnalyticsService {
   
   async getDashboardStats() {
-    const [sales, products, inventory, customers] = await Promise.all([
+    const [sales, products, inventory, customers, stores] = await Promise.all([
       csvService.getSales(),
       csvService.getProducts(),
       csvService.getInventory(),
-      csvService.getCustomers()
+      csvService.getCustomers(),
+      csvService.getStores()
     ]);
 
     const totalSales = sales.reduce((sum, sale) => sum + (sale.total_value || 0), 0);
@@ -19,9 +20,26 @@ class AnalyticsService {
 
     const lowStockItems = inventory.filter(item => item.stock_on_hand < item.reorder_point);
 
+    // Gráficas existentes
     const salesByMonth = this.groupSalesByMonth(sales);
     const topCategories = this.getTopCategories(sales, products);
     const topProducts = this.getTopProducts(sales, products);
+
+    // NUEVAS GRÁFICAS - Clientes
+    const customersByGender = this.groupCustomersByGender(customers);
+    const customersByLoyalty = this.groupCustomersByLoyalty(customers);
+    const customersByCity = this.groupCustomersByCity(customers);
+
+    // NUEVAS GRÁFICAS - Ventas
+    const salesByChannel = this.calculateSalesByChannel(sales);
+    const salesByDay = this.groupSalesByDay(sales);
+
+    // KPIs Extras
+    const topChannel = this.getTopChannel(sales);
+    const topCategory = topCategories[0]?.category || 'N/A';
+
+    // Insights
+    const insights = this.generateInsights(sales, products, salesByChannel, topCategories);
 
     return {
       kpis: {
@@ -32,15 +50,29 @@ class AnalyticsService {
         averageTicket: parseFloat(averageTicket.toFixed(2)),
         lowStockCount: lowStockItems.length,
         totalOrders: sales.length,
-        totalStores: (await csvService.getStores()).length,
-        totalInventoryItems: inventory.length
+        totalStores: stores.length,
+        totalInventoryItems: inventory.length,
+        topChannel: topChannel,
+        topCategory: topCategory
       },
       charts: {
+        // Existentes
         salesByMonth,
         topCategories,
         topProducts,
+        
+        // Nuevas - Clientes
+        customersByGender,
+        customersByLoyalty,
+        customersByCity,
+        
+        // Nuevas - Ventas
+        salesByChannel,
+        salesByDay,
+        
         lowStockItems: lowStockItems.slice(0, 10)
-      }
+      },
+      insights
     };
   }
 
@@ -135,7 +167,7 @@ class AnalyticsService {
     const channelSales = {};
     
     sales.forEach(sale => {
-      const channel = sale.channel || 'Unknown';
+      const channel = sale.channel || 'Desconocido';
       
       if (!channelSales[channel]) {
         channelSales[channel] = 0;
@@ -144,10 +176,12 @@ class AnalyticsService {
       channelSales[channel] += sale.total_value || 0;
     });
 
-    return Object.entries(channelSales).map(([channel, total]) => ({
-      channel,
-      total: parseFloat(total.toFixed(2))
-    }));
+    return Object.entries(channelSales)
+      .sort(([, a], [, b]) => b - a)
+      .map(([channel, total]) => ({
+        channel,
+        total: parseFloat(total.toFixed(2))
+      }));
   }
 
   async getSalesByStore() {
@@ -268,6 +302,168 @@ class AnalyticsService {
         quantity: data.quantity,
         orders: data.orders
       }));
+  }
+
+  // ============================================
+  // NUEVOS MÉTODOS PARA DASHBOARD MEJORADO
+  // ============================================
+
+  // Clientes por Género
+  groupCustomersByGender(customers) {
+    const grouped = {};
+    customers.forEach(customer => {
+      let gender = customer.gender || 'Desconocido';
+      // Traducir a español
+      if (gender === 'Male') gender = 'Hombre';
+      else if (gender === 'Female') gender = 'Mujer';
+      
+      grouped[gender] = (grouped[gender] || 0) + 1;
+    });
+    
+    return Object.entries(grouped).map(([gender, count]) => ({
+      gender,
+      count,
+      percentage: parseFloat(((count / customers.length) * 100).toFixed(1))
+    }));
+  }
+
+  // Clientes por Nivel de Lealtad
+  groupCustomersByLoyalty(customers) {
+    const grouped = {};
+    customers.forEach(customer => {
+      let loyalty = customer.loyalty_segment || 'Desconocido';
+      // Traducir a español si es necesario
+      if (loyalty === 'Silver') loyalty = 'Plata';
+      else if (loyalty === 'Gold') loyalty = 'Oro';
+      else if (loyalty === 'Platinum') loyalty = 'Platino';
+      
+      grouped[loyalty] = (grouped[loyalty] || 0) + 1;
+    });
+    
+    return Object.entries(grouped)
+      .sort(([, a], [, b]) => b - a)
+      .map(([loyalty, count]) => ({
+        loyalty,
+        count,
+        percentage: parseFloat(((count / customers.length) * 100).toFixed(1))
+      }));
+  }
+
+  // Clientes por Ciudad
+  groupCustomersByCity(customers) {
+    const grouped = {};
+    customers.forEach(customer => {
+      const city = customer.city || 'Desconocido';
+      grouped[city] = (grouped[city] || 0) + 1;
+    });
+    
+    return Object.entries(grouped)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([city, count]) => ({
+        city,
+        count,
+        percentage: parseFloat(((count / customers.length) * 100).toFixed(1))
+      }));
+  }
+
+  // Ventas por Canal con porcentajes (método interno)
+  calculateSalesByChannel(sales) {
+    const channelSales = {};
+    const totalSales = sales.reduce((sum, sale) => sum + (sale.total_value || 0), 0);
+    
+    sales.forEach(sale => {
+      const channel = sale.channel || 'Desconocido';
+      if (!channelSales[channel]) {
+        channelSales[channel] = { total: 0, orders: 0 };
+      }
+      channelSales[channel].total += sale.total_value || 0;
+      channelSales[channel].orders += 1;
+    });
+
+    return Object.entries(channelSales)
+      .sort(([, a], [, b]) => b.total - a.total)
+      .map(([channel, data]) => ({
+        channel,
+        total: parseFloat(data.total.toFixed(2)),
+        orders: data.orders,
+        percentage: parseFloat(((data.total / totalSales) * 100).toFixed(1))
+      }));
+  }
+
+  // Ventas por Día (últimos 30 días)
+  groupSalesByDay(sales) {
+    const grouped = {};
+    
+    sales.forEach(sale => {
+      if (!sale.date) return;
+      
+      const dateKey = sale.date.split('T')[0]; // YYYY-MM-DD
+      
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = { total: 0, quantity: 0, orders: 0 };
+      }
+      
+      grouped[dateKey].total += sale.total_value || 0;
+      grouped[dateKey].quantity += sale.quantity || 0;
+      grouped[dateKey].orders += 1;
+    });
+
+    return Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-30) // Últimos 30 días
+      .map(([date, data]) => ({
+        date,
+        total: parseFloat(data.total.toFixed(2)),
+        quantity: data.quantity,
+        orders: data.orders
+      }));
+  }
+
+  // Top Channel
+  getTopChannel(sales) {
+    const channelSales = {};
+    
+    sales.forEach(sale => {
+      const channel = sale.channel || 'Unknown';
+      channelSales[channel] = (channelSales[channel] || 0) + (sale.total_value || 0);
+    });
+
+    const sorted = Object.entries(channelSales).sort(([, a], [, b]) => b - a);
+    return sorted[0] ? sorted[0][0] : 'N/A';
+  }
+
+  // Insights automáticos
+  generateInsights(sales, products, salesByChannel, topCategories) {
+    const insights = [];
+    const totalSales = sales.reduce((sum, sale) => sum + (sale.total_value || 0), 0);
+
+    // Insight 1: Canal más fuerte
+    if (salesByChannel.length > 0) {
+      const top = salesByChannel[0];
+      insights.push({
+        icon: '🏪',
+        text: `${top.channel} genera más ventas con $${top.total.toLocaleString('es-MX')} (${top.percentage}%)`
+      });
+    }
+
+    // Insight 2: Categoría dominante
+    if (topCategories.length > 0) {
+      const topCat = topCategories[0];
+      const percentage = ((topCat.total / totalSales) * 100).toFixed(1);
+      insights.push({
+        icon: '🏷️',
+        text: `${topCat.category} domina con ${percentage}% de las ventas totales`
+      });
+    }
+
+    // Insight 3: Volumen de órdenes
+    insights.push({
+      icon: '📦',
+      text: `${sales.length.toLocaleString('es-MX')} órdenes procesadas en total`
+    });
+
+    return insights;
   }
 }
 

@@ -100,6 +100,67 @@
         </div>
       </div>
 
+      <!-- NUEVAS SECCIONES -->
+      
+      <!-- KPIs Extras -->
+      <div class="kpi-extras">
+        <div class="kpi-extra-card">
+          <div class="kpi-extra-icon">🏪</div>
+          <div class="kpi-extra-info">
+            <h4>Canal Más Fuerte</h4>
+            <p class="kpi-extra-value">{{ dashboardData.kpis?.topChannel || 'N/A' }}</p>
+          </div>
+        </div>
+        <div class="kpi-extra-card">
+          <div class="kpi-extra-icon">🏷️</div>
+          <div class="kpi-extra-info">
+            <h4>Categoría Más Vendida</h4>
+            <p class="kpi-extra-value">{{ dashboardData.kpis?.topCategory || 'N/A' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Insights -->
+      <div v-if="dashboardData.insights?.length > 0" class="insights-section">
+        <h3 class="section-title">
+          <n-icon size="24" class="section-icon">
+            <BulbOutline />
+          </n-icon>
+          Insights del Negocio
+        </h3>
+        <div class="insights-grid">
+          <div v-for="(insight, index) in dashboardData.insights" :key="index" class="insight-card">
+            <span class="insight-icon">{{ insight.icon }}</span>
+            <p class="insight-text">{{ insight.text }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribución de Clientes -->
+      <div class="section-title-main">
+        <n-icon size="28" class="section-icon">
+          <PeopleOutline />
+        </n-icon>
+        <h2>Distribución de Clientes</h2>
+      </div>
+      
+      <div class="charts-grid three-cols">
+        <div class="chart-card">
+          <h3 class="chart-title">Por Género</h3>
+          <canvas id="genderChart" ref="genderChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3 class="chart-title">Por Nivel de Lealtad</h3>
+          <canvas id="loyaltyChart" ref="loyaltyChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3 class="chart-title">Por Ciudad</h3>
+          <canvas id="cityChart" ref="cityChart"></canvas>
+        </div>
+      </div>
+
       <!-- Low Stock Alert Table -->
       <div v-if="dashboardData.charts?.lowStockItems?.length > 0" class="low-stock-section">
         <h3 class="section-title">
@@ -145,7 +206,9 @@ import {
   TrendingUpOutline,
   PieChartOutline,
   BarChartOutline,
-  WarningOutline
+  WarningOutline,
+  BulbOutline,
+  PeopleOutline
 } from '@vicons/ionicons5';
 
 Chart.register(...registerables);
@@ -155,6 +218,11 @@ const dashboardData = ref({});
 const salesChart = ref(null);
 const categoriesChart = ref(null);
 const productsChart = ref(null);
+
+// Nuevos refs para las gráficas adicionales
+const genderChart = ref(null);
+const loyaltyChart = ref(null);
+const cityChart = ref(null);
 
 const formatNumber = (num) => {
   return new Intl.NumberFormat('es-MX').format(num);
@@ -377,6 +445,119 @@ const createCharts = () => {
               font: { size: 10 }
             },
             grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  // NUEVAS GRÁFICAS
+
+  // Gráfica de Género
+  if (genderChart.value && dashboardData.value.charts?.customersByGender?.length > 0) {
+    const ctx = genderChart.value.getContext('2d');
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: dashboardData.value.charts.customersByGender.map(d => d.gender),
+        datasets: [{
+          data: dashboardData.value.charts.customersByGender.map(d => d.count),
+          backgroundColor: ['#667eea', '#fa709a'],
+          borderColor: '#fff',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { 
+              color: '#4a5568',
+              font: { size: 12, weight: 'bold' }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const item = dashboardData.value.charts.customersByGender[context.dataIndex];
+                return `${context.label}: ${item.count} (${item.percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Gráfica de Lealtad
+  if (loyaltyChart.value && dashboardData.value.charts?.customersByLoyalty?.length > 0) {
+    const ctx = loyaltyChart.value.getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: dashboardData.value.charts.customersByLoyalty.map(d => d.loyalty),
+        datasets: [{
+          data: dashboardData.value.charts.customersByLoyalty.map(d => d.count),
+          backgroundColor: ['#FFD700', '#C0C0C0', '#B87333'],
+          borderColor: '#fff',
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { 
+              color: '#4a5568',
+              font: { size: 12, weight: 'bold' }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const item = dashboardData.value.charts.customersByLoyalty[context.dataIndex];
+                return `${context.label}: ${item.count} (${item.percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Gráfica de Ciudad
+  if (cityChart.value && dashboardData.value.charts?.customersByCity?.length > 0) {
+    const ctx = cityChart.value.getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: dashboardData.value.charts.customersByCity.map(d => d.city),
+        datasets: [{
+          label: 'Clientes',
+          data: dashboardData.value.charts.customersByCity.map(d => d.count),
+          backgroundColor: 'rgba(102, 126, 234, 0.8)',
+          borderColor: '#667eea',
+          borderWidth: 2,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#4a5568', font: { size: 11 } }
+          },
+          x: {
+            ticks: { color: '#4a5568', font: { size: 11 } }
           }
         }
       }
@@ -651,6 +832,133 @@ onMounted(() => {
   .stock-table td {
     padding: 0.75rem 0.5rem;
     font-size: 0.85rem;
+  }
+}
+
+/* NUEVOS ESTILOS */
+
+/* KPIs Extras */
+.kpi-extras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.kpi-extra-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.kpi-extra-icon {
+  font-size: 3rem;
+}
+
+.kpi-extra-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.kpi-extra-value {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+/* Insights */
+.insights-section {
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.insight-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #f8f9fa;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
+}
+
+.insight-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.insight-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* Títulos de Sección */
+.section-title-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 2.5rem 0 1.5rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.section-title-main h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Grid Variations */
+.charts-grid.three-cols {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.charts-grid.two-cols {
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .charts-grid.three-cols,
+  .charts-grid.two-cols {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-extras {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-grid.three-cols,
+  .charts-grid.two-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .section-title-main h2 {
+    font-size: 1.2rem;
   }
 }
 </style>
