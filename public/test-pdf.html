@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Test jsPDF AutoTable</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      display: none;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test jsPDF + AutoTable</h1>
+  <p>Prueba para verificar que jspdf-autotable funciona correctamente</p>
+  
+  <button onclick="testPDF()">📄 Generar PDF de Prueba</button>
+  <button onclick="checkAutoTable()">🔍 Verificar autoTable</button>
+  
+  <div id="result"></div>
+  
+  <script type="module">
+    import jsPDF from '/node_modules/jspdf/dist/jspdf.es.min.js';
+    import '/node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.js';
+    
+    window.testJsPDF = jsPDF;
+    
+    window.testPDF = function() {
+      const result = document.getElementById('result');
+      try {
+        const doc = new jsPDF();
+        
+        if (typeof doc.autoTable !== 'function') {
+          throw new Error('autoTable NO está disponible en doc');
+        }
+        
+        doc.text('Test jsPDF AutoTable', 10, 10);
+        
+        doc.autoTable({
+          head: [['Nombre', 'Email', 'País']],
+          body: [
+            ['David', 'david@example.com', 'Sweden'],
+            ['Castille', 'castille@example.com', 'Spain'],
+            ['Juan', 'juan@example.com', 'Mexico'],
+          ],
+          startY: 20,
+          theme: 'grid',
+          headStyles: { fillColor: [102, 126, 234] }
+        });
+        
+        doc.save('test-autotable.pdf');
+        
+        result.className = 'success';
+        result.style.display = 'block';
+        result.innerHTML = '✅ PDF generado correctamente con autoTable';
+      } catch (error) {
+        result.className = 'error';
+        result.style.display = 'block';
+        result.innerHTML = `❌ Error: ${error.message}`;
+        console.error(error);
+      }
+    };
+    
+    window.checkAutoTable = function() {
+      const result = document.getElementById('result');
+      try {
+        const doc = new jsPDF();
+        const hasAutoTable = typeof doc.autoTable === 'function';
+        
+        result.style.display = 'block';
+        if (hasAutoTable) {
+          result.className = 'success';
+          result.innerHTML = '✅ autoTable está disponible en jsPDF';
+        } else {
+          result.className = 'error';
+          result.innerHTML = '❌ autoTable NO está disponible en jsPDF<br>Tipo: ' + typeof doc.autoTable;
+        }
+      } catch (error) {
+        result.className = 'error';
+        result.style.display = 'block';
+        result.innerHTML = `❌ Error: ${error.message}`;
+      }
+    };
+  </script>
+</body>
+</html>

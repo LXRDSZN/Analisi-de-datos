@@ -124,10 +124,10 @@
 </template>
 
 <script setup>
-import { ref, markRaw } from 'vue';
+import { ref, markRaw, onMounted } from 'vue';
 import { NButton, NModal, NCard } from 'naive-ui';
 import axios from 'axios';
-import html2pdf from 'html2pdf.js';
+import createPDF from '@/utils/pdfGenerator.js';
 import DailySalesReport from './ReportViews/DailySalesReport.vue';
 import WeeklyExecutiveReport from './ReportViews/WeeklyExecutiveReport.vue';
 import TopProductsReport from './ReportViews/TopProductsReport.vue';
@@ -187,23 +187,413 @@ const viewReport = async (endpoint, title, loadingKey, component) => {
 const downloadAsPDF = async () => {
   downloadingPDF.value = true;
   try {
-    const element = reportContent.value;
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `${currentFilename.value}_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    const doc = await createPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
     
-    await html2pdf().set(opt).from(element).save();
+    // Verificar que autoTable está disponible
+    if (typeof doc.autoTable !== 'function') {
+      throw new Error('autoTable plugin no está cargado correctamente. Por favor recarga la página.');
+    }
+    
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    // Header
+    doc.setFillColor(102, 126, 234);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(modalTitle.value, pageWidth / 2, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-MX', { 
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    })}`, pageWidth / 2, 25, { align: 'center' });
+
+    yPos = 45;
+    doc.setTextColor(0, 0, 0);
+
+    // Generate content based on report type
+    if (currentFilename.value === 'daily-sales') {
+      yPos = generateDailySalesPDF(doc, modalData.value, yPos, pageWidth, margin);
+    } else if (currentFilename.value === 'top-products') {
+      yPos = generateTopProductsPDF(doc, modalData.value, yPos, pageWidth, margin);
+    } else if (currentFilename.value === 'store-performance') {
+      yPos = generateStorePerformancePDF(doc, modalData.value, yPos, pageWidth, margin);
+    } else if (currentFilename.value === 'average-ticket-by-channel') {
+      yPos = generateChannelTicketPDF(doc, modalData.value, yPos, pageWidth, margin);
+    } else if (currentFilename.value === 'discount-sales') {
+      yPos = generateDiscountSalesPDF(doc, modalData.value, yPos, pageWidth, margin);
+    } else if (currentFilename.value === 'recurring-customers') {
+      yPos = generateRecurringCustomersPDF(doc, modalData.value, yPos, pageWidth, margin);
+    } else if (currentFilename.value === 'weekly-executive') {
+      yPos = generateWeeklyExecutivePDF(doc, modalData.value, yPos, pageWidth, margin);
+    }
+
+    // Footer
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `BlueMart Analytics - Página ${i} de ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(`${currentFilename.value}_${new Date().toISOString().split('T')[0]}.pdf`);
     alert('PDF descargado exitosamente');
   } catch (error) {
     console.error('Error generating PDF:', error);
-    alert('Error al generar PDF');
+    alert('Error al generar PDF: ' + error.message);
   } finally {
     downloadingPDF.value = false;
   }
+};
+
+const formatNumber = (num) => {
+  return new Intl.NumberFormat('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num);
+};
+
+const generateDailySalesPDF = (doc, data, yPos, pageWidth, margin) => {
+  // Summary metrics
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('📈 Resumen General', margin, yPos);
+  yPos += 10;
+
+  const metrics = [
+    ['Ingresos Totales', `$${formatNumber(data.summary?.totalRevenue || 0)}`],
+    ['Total de Órdenes', formatNumber(data.summary?.totalOrders || 0)],
+    ['Cantidad Total', formatNumber(data.summary?.totalQuantity || 0)],
+    ['Ticket Promedio', `$${formatNumber(data.summary?.averageTicket || 0)}`]
+  ];
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['Métrica', 'Valor']],
+    body: metrics,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    margin: { left: margin, right: margin }
+  });
+
+  yPos = doc.lastAutoTable.finalY + 10;
+
+  // By channel
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('🛒 Ventas por Canal', margin, yPos);
+  yPos += 5;
+
+  const channelData = (data.byChannel || []).map(ch => [
+    ch.channel || 'N/A',
+    `$${formatNumber(ch.revenue || 0)}`,
+    (ch.orders || 0).toString()
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['Canal', 'Ingresos', 'Órdenes']],
+    body: channelData,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    margin: { left: margin, right: margin }
+  });
+
+  yPos = doc.lastAutoTable.finalY + 10;
+
+  // Top products
+  if (data.topProducts && data.topProducts.length) {
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(102, 126, 234);
+    doc.text('🏆 Top Productos del Día', margin, yPos);
+    yPos += 5;
+
+    const productData = data.topProducts.slice(0, 5).map(p => [
+      p.rank.toString(),
+      p.product_name,
+      p.category,
+      `$${formatNumber(p.revenue)}`,
+      p.quantity.toString()
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      head: [['#', 'Producto', 'Categoría', 'Ingresos', 'Cantidad']],
+      body: productData,
+      theme: 'grid',
+      headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: margin, right: margin }
+    });
+  }
+
+  return doc.lastAutoTable.finalY;
+};
+
+const generateTopProductsPDF = (doc, data, yPos, pageWidth, margin) => {
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('🏆 Top 10 Productos Más Vendidos', margin, yPos);
+  yPos += 10;
+
+  const productData = data.products.map(p => [
+    p.rank.toString(),
+    p.product_name,
+    p.category,
+    `$${formatNumber(p.revenue)}`,
+    p.quantity.toString(),
+    p.orders.toString()
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['#', 'Producto', 'Categoría', 'Ingresos', 'Cantidad', 'Órdenes']],
+    body: productData,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    margin: { left: margin, right: margin },
+    columnStyles: {
+      1: { cellWidth: 50 },
+      2: { cellWidth: 35 }
+    }
+  });
+
+  return doc.lastAutoTable.finalY;
+};
+
+const generateStorePerformancePDF = (doc, data, yPos, pageWidth, margin) => {
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('🏪 Rendimiento por Tienda', margin, yPos);
+  yPos += 10;
+
+  const storeData = data.stores.map(s => [
+    s.rank.toString(),
+    s.store_name,
+    s.city,
+    `$${formatNumber(s.revenue)}`,
+    s.orders.toString(),
+    `$${formatNumber(s.avgTicket)}`
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['#', 'Tienda', 'Ciudad', 'Ingresos', 'Órdenes', 'Ticket Prom.']],
+    body: storeData,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    margin: { left: margin, right: margin }
+  });
+
+  return doc.lastAutoTable.finalY;
+};
+
+const generateChannelTicketPDF = (doc, data, yPos, pageWidth, margin) => {
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('💰 Ticket Promedio por Canal', margin, yPos);
+  yPos += 10;
+
+  const channelData = data.channels.map(ch => [
+    ch.channel,
+    `$${formatNumber(ch.avgTicket)}`,
+    ch.orders.toString(),
+    `$${formatNumber(ch.totalRevenue)}`
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['Canal', 'Ticket Promedio', 'Órdenes', 'Ingresos Totales']],
+    body: channelData,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    margin: { left: margin, right: margin }
+  });
+
+  return doc.lastAutoTable.finalY;
+};
+
+const generateDiscountSalesPDF = (doc, data, yPos, pageWidth, margin) => {
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('🏷️ Análisis de Ventas con Descuento', margin, yPos);
+  yPos += 10;
+
+  const summary = [
+    ['Ventas Totales', `$${formatNumber(data.summary.totalSales)}`],
+    ['Ventas con Descuento', `$${formatNumber(data.summary.salesWithDiscount)}`],
+    ['Porcentaje', `${data.summary.percentageWithDiscount}%`],
+    ['Descuento Promedio', `${data.summary.avgDiscountPercent}%`]
+  ];
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['Métrica', 'Valor']],
+    body: summary,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    margin: { left: margin, right: margin }
+  });
+
+  return doc.lastAutoTable.finalY;
+};
+
+const generateRecurringCustomersPDF = (doc, data, yPos, pageWidth, margin) => {
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('👥 Análisis de Clientes Recurrentes', margin, yPos);
+  yPos += 10;
+
+  const summary = [
+    ['Total de Clientes', data.summary.totalCustomers.toString()],
+    ['Clientes Recurrentes', data.summary.recurringCustomers.toString()],
+    ['Porcentaje', `${data.summary.recurringPercentage}%`],
+    ['Compras Promedio', data.summary.avgPurchasesPerCustomer.toString()]
+  ];
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['Métrica', 'Valor']],
+    body: summary,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    margin: { left: margin, right: margin }
+  });
+
+  yPos = doc.lastAutoTable.finalY + 10;
+
+  if (data.topRecurring && data.topRecurring.length) {
+    doc.setFontSize(12);
+    doc.text('Top 10 Clientes Más Frecuentes', margin, yPos);
+    yPos += 5;
+
+    const customerData = data.topRecurring.slice(0, 10).map((c, i) => [
+      (i + 1).toString(),
+      c.customer_name,
+      c.purchases.toString(),
+      `$${formatNumber(c.totalSpent)}`
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      head: [['#', 'Cliente', 'Compras', 'Total Gastado']],
+      body: customerData,
+      theme: 'grid',
+      headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: margin, right: margin }
+    });
+  }
+
+  return doc.lastAutoTable.finalY;
+};
+
+const generateWeeklyExecutivePDF = (doc, data, yPos, pageWidth, margin) => {
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(102, 126, 234);
+  doc.text('📋 Reporte Ejecutivo Semanal', margin, yPos);
+  yPos += 10;
+
+  // KPIs principales
+  const kpis = [
+    ['Ingresos Totales', `$${formatNumber(data.kpis.totalRevenue)}`],
+    ['Órdenes Totales', formatNumber(data.kpis.totalOrders)],
+    ['Ticket Promedio', `$${formatNumber(data.kpis.avgTicket)}`],
+    ['Productos Vendidos', formatNumber(data.kpis.productsSold)]
+  ];
+
+  doc.autoTable({
+    startY: yPos,
+    head: [['KPI', 'Valor']],
+    body: kpis,
+    theme: 'grid',
+    headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    margin: { left: margin, right: margin }
+  });
+
+  yPos = doc.lastAutoTable.finalY + 10;
+
+  // Top productos
+  if (data.topProducts && data.topProducts.length) {
+    doc.setFontSize(12);
+    doc.text('Top 5 Productos', margin, yPos);
+    yPos += 5;
+
+    const productData = data.topProducts.slice(0, 5).map((p, i) => [
+      (i + 1).toString(),
+      p.product_name,
+      `$${formatNumber(p.revenue)}`,
+      p.quantity.toString()
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      head: [['#', 'Producto', 'Ingresos', 'Cantidad']],
+      body: productData,
+      theme: 'grid',
+      headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: margin, right: margin }
+    });
+
+    yPos = doc.lastAutoTable.finalY + 10;
+  }
+
+  // Ventas por canal
+  if (data.byChannel && data.byChannel.length) {
+    doc.setFontSize(12);
+    doc.text('Ventas por Canal', margin, yPos);
+    yPos += 5;
+
+    const channelData = data.byChannel.map(ch => [
+      ch.channel,
+      `$${formatNumber(ch.revenue)}`,
+      ch.orders.toString()
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      head: [['Canal', 'Ingresos', 'Órdenes']],
+      body: channelData,
+      theme: 'grid',
+      headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: margin, right: margin }
+    });
+  }
+
+  return doc.lastAutoTable.finalY;
 };
 
 const downloadAsHTML = () => {
