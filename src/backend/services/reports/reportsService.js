@@ -90,9 +90,14 @@ class ReportsService {
         store_name: store?.store_name || 'Unknown',
         city: store?.city || 'Unknown',
         revenue: parseFloat(sm.revenue.toFixed(2)),
+        avgTicket: sm.orders > 0 ? parseFloat((sm.revenue / sm.orders).toFixed(2)) : 0,
         averageTicket: sm.orders > 0 ? parseFloat((sm.revenue / sm.orders).toFixed(2)) : 0
       };
-    }).sort((a, b) => b.revenue - a.revenue);
+    }).sort((a, b) => b.revenue - a.revenue)
+      .map((store, index) => ({
+        ...store,
+        rank: index + 1
+      }));
     
     return {
       totalStores: storePerformance.length,
@@ -124,6 +129,8 @@ class ReportsService {
         channel,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
         totalOrders,
+        orders: totalOrders,
+        avgTicket: totalOrders > 0 ? parseFloat((totalRevenue / totalOrders).toFixed(2)) : 0,
         averageTicket: totalOrders > 0 ? parseFloat((totalRevenue / totalOrders).toFixed(2)) : 0,
         revenueShare: 0
       };
@@ -212,8 +219,8 @@ class ReportsService {
     
     Object.entries(customerPurchases).forEach(([custId, count]) => {
       if (count === 1) oneTimeBuyers.push(custId);
-      else if (count < 5) recurringCustomers.push(custId);
-      else loyalCustomers.push(custId);
+      else if (count >= 2 && count <= 4) recurringCustomers.push(custId);
+      else if (count >= 5) loyalCustomers.push(custId);
     });
     
     // Calcular revenue por segmento
@@ -236,32 +243,34 @@ class ReportsService {
     });
     
     const totalRevenue = Object.values(segmentRevenue).reduce((sum, v) => sum + v, 0);
+    const totalCustomers = Object.keys(customerPurchases).length;
+    const recurringTotal = recurringCustomers.length + loyalCustomers.length;
     
     return {
       summary: {
-        totalCustomers: Object.keys(customerPurchases).length,
+        totalCustomers,
         oneTimeBuyers: oneTimeBuyers.length,
         recurringCustomers: recurringCustomers.length,
         loyalCustomers: loyalCustomers.length,
-        recurringRate: parseFloat(((recurringCustomers.length + loyalCustomers.length) / Object.keys(customerPurchases).length * 100).toFixed(2))
+        recurringRate: totalCustomers > 0 ? parseFloat((recurringTotal / totalCustomers * 100).toFixed(2)) : 0
       },
       segments: {
         oneTime: {
           customers: oneTimeBuyers.length,
           revenue: parseFloat(segmentRevenue.oneTime.toFixed(2)),
-          revenueShare: parseFloat((segmentRevenue.oneTime / totalRevenue * 100).toFixed(2)),
-          avgRevenue: parseFloat((segmentRevenue.oneTime / oneTimeBuyers.length).toFixed(2))
+          revenueShare: totalRevenue > 0 ? parseFloat((segmentRevenue.oneTime / totalRevenue * 100).toFixed(2)) : 0,
+          avgRevenue: oneTimeBuyers.length > 0 ? parseFloat((segmentRevenue.oneTime / oneTimeBuyers.length).toFixed(2)) : 0
         },
         recurring: {
           customers: recurringCustomers.length,
           revenue: parseFloat(segmentRevenue.recurring.toFixed(2)),
-          revenueShare: parseFloat((segmentRevenue.recurring / totalRevenue * 100).toFixed(2)),
+          revenueShare: totalRevenue > 0 ? parseFloat((segmentRevenue.recurring / totalRevenue * 100).toFixed(2)) : 0,
           avgRevenue: recurringCustomers.length > 0 ? parseFloat((segmentRevenue.recurring / recurringCustomers.length).toFixed(2)) : 0
         },
         loyal: {
           customers: loyalCustomers.length,
           revenue: parseFloat(segmentRevenue.loyal.toFixed(2)),
-          revenueShare: parseFloat((segmentRevenue.loyal / totalRevenue * 100).toFixed(2)),
+          revenueShare: totalRevenue > 0 ? parseFloat((segmentRevenue.loyal / totalRevenue * 100).toFixed(2)) : 0,
           avgRevenue: loyalCustomers.length > 0 ? parseFloat((segmentRevenue.loyal / loyalCustomers.length).toFixed(2)) : 0
         }
       },
