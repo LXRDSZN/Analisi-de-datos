@@ -5,7 +5,7 @@
       <p class="report-date">Período: {{ getPeriodLabel(data.period) }}</p>
     </div>
 
-    <div class="section">
+    <div class="section" v-if="data.products && data.products.length > 0">
       <table class="data-table">
         <thead>
           <tr>
@@ -18,16 +18,20 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="product in data.products" :key="product.sku_id">
+          <tr v-for="product in data.products" :key="product.sku_id || product.rank">
             <td><strong>{{ product.rank }}</strong></td>
-            <td>{{ product.product_name }}</td>
-            <td>{{ product.category }}</td>
-            <td class="highlight">${{ formatNumber(product.revenue) }}</td>
-            <td>{{ product.quantity }}</td>
-            <td>{{ product.orders }}</td>
+            <td>{{ product.product_name || 'N/A' }}</td>
+            <td>{{ product.category || 'N/A' }}</td>
+            <td class="highlight">${{ formatNumber(product.revenue || 0) }}</td>
+            <td>{{ formatNumber(product.quantity || 0) }}</td>
+            <td>{{ product.orders || 0 }}</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="section" v-else>
+      <p class="no-data">No hay productos disponibles para mostrar.</p>
     </div>
 
     <div class="report-footer">
@@ -145,5 +149,12 @@ const formatDate = (dateStr) => {
   text-align: center;
   color: #666;
   font-size: 0.9rem;
+}
+
+.no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
+  font-size: 1.1rem;
 }
 </style>

@@ -384,35 +384,43 @@ class ReportsService {
   }
 
   filterSalesByPeriod(sales, period) {
-    const now = new Date();
-    let startDate;
+    if (!sales || sales.length === 0) return [];
+    
+    // Encontrar la fecha más reciente de forma más eficiente
+    let maxDateStr = sales[0]?.date;
+    for (let i = 1; i < sales.length; i++) {
+      if (sales[i].date > maxDateStr) {
+        maxDateStr = sales[i].date;
+      }
+    }
+    
+    if (!maxDateStr) return sales;
+    
+    const maxDate = new Date(maxDateStr);
+    let startDate = new Date(maxDate);
     
     switch (period) {
       case 'day':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 1);
+        startDate.setDate(maxDate.getDate() - 1);
         break;
       case 'week':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
+        startDate.setDate(maxDate.getDate() - 7);
         break;
       case 'month':
-        startDate = new Date(now);
-        startDate.setMonth(now.getMonth() - 1);
+        startDate.setMonth(maxDate.getMonth() - 1);
         break;
       case 'quarter':
-        startDate = new Date(now);
-        startDate.setMonth(now.getMonth() - 3);
+        startDate.setMonth(maxDate.getMonth() - 3);
         break;
       case 'year':
-        startDate = new Date(now);
-        startDate.setFullYear(now.getFullYear() - 1);
+        startDate.setFullYear(maxDate.getFullYear() - 1);
         break;
       default:
         return sales;
     }
     
-    return sales.filter(s => new Date(s.date) >= startDate);
+    const startDateStr = startDate.toISOString().split('T')[0];
+    return sales.filter(s => s.date >= startDateStr);
   }
 }
 
