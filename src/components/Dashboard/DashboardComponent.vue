@@ -136,6 +136,88 @@
         </div>
       </div>
 
+      <!-- Ventas por Tipo de Cliente -->
+      <div v-if="dashboardData.charts?.salesByCustomerType" class="customer-type-section">
+        <h3 class="section-title">
+          <n-icon size="24" class="section-icon">
+            <PeopleOutline />
+          </n-icon>
+          Ventas por Tipo de Cliente
+        </h3>
+        
+        <div class="customer-type-grid">
+          <!-- Clientes Registrados -->
+          <div class="customer-type-card registered">
+            <div class="card-header">
+              <div class="card-icon">👤</div>
+              <h4>Clientes Registrados</h4>
+            </div>
+            <div class="card-body">
+              <div class="metric">
+                <span class="metric-label">Órdenes</span>
+                <span class="metric-value">{{ formatNumber(dashboardData.charts.salesByCustomerType.registered.orders) }}</span>
+              </div>
+              <div class="metric highlight">
+                <span class="metric-label">Participación</span>
+                <span class="metric-value">{{ dashboardData.charts.salesByCustomerType.registered.percentage }}%</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Ventas Totales</span>
+                <span class="metric-value">${{ formatNumber(dashboardData.charts.salesByCustomerType.registered.totalSales) }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Productos Vendidos</span>
+                <span class="metric-value">{{ formatNumber(dashboardData.charts.salesByCustomerType.registered.productsCount) }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Ticket Promedio</span>
+                <span class="metric-value">${{ formatNumber(dashboardData.charts.salesByCustomerType.registered.averageTicket) }}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <p>✅ Clientes identificados en el sistema</p>
+              <p>✅ Permiten análisis CRM y fidelización</p>
+              <p>✅ Rastreo de comportamiento y recurrencia</p>
+            </div>
+          </div>
+
+          <!-- Clientes No Registrados -->
+          <div class="customer-type-card non-registered">
+            <div class="card-header">
+              <div class="card-icon">👥</div>
+              <h4>Clientes No Registrados</h4>
+            </div>
+            <div class="card-body">
+              <div class="metric">
+                <span class="metric-label">Órdenes</span>
+                <span class="metric-value">{{ formatNumber(dashboardData.charts.salesByCustomerType.nonRegistered.orders) }}</span>
+              </div>
+              <div class="metric highlight">
+                <span class="metric-label">Participación</span>
+                <span class="metric-value">{{ dashboardData.charts.salesByCustomerType.nonRegistered.percentage }}%</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Ventas Totales</span>
+                <span class="metric-value">${{ formatNumber(dashboardData.charts.salesByCustomerType.nonRegistered.totalSales) }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Productos Vendidos</span>
+                <span class="metric-value">{{ formatNumber(dashboardData.charts.salesByCustomerType.nonRegistered.productsCount) }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Ticket Promedio</span>
+                <span class="metric-value">${{ formatNumber(dashboardData.charts.salesByCustomerType.nonRegistered.averageTicket) }}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <p>💡 Compradores anónimos o invitados</p>
+              <p>💡 Compras rápidas e impulsivas</p>
+              <p>💡 Oportunidad de conversión</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Distribución de Clientes -->
       <div class="section-title-main">
         <n-icon size="28" class="section-icon">
@@ -241,6 +323,7 @@ const loadDashboard = async () => {
     console.log('- Sales by month:', dashboardData.value.charts?.salesByMonth?.length);
     console.log('- Top categories:', dashboardData.value.charts?.topCategories?.length);
     console.log('- Top products:', dashboardData.value.charts?.topProducts?.length);
+    console.log('- Sales by customer type:', dashboardData.value.charts?.salesByCustomerType);
     
     loading.value = false;
     
@@ -959,6 +1042,135 @@ onMounted(() => {
 
   .section-title-main h2 {
     font-size: 1.2rem;
+  }
+}
+
+/* Customer Type Section */
+.customer-type-section {
+  width: 100%;
+  margin: 3rem 0;
+}
+
+.customer-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.customer-type-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.customer-type-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.customer-type-card.registered {
+  border-top: 4px solid #48bb78;
+}
+
+.customer-type-card.non-registered {
+  border-top: 4px solid #ed8936;
+}
+
+.customer-type-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+}
+
+.customer-type-card.registered .card-header {
+  background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+}
+
+.customer-type-card.non-registered .card-header {
+  background: linear-gradient(135deg, #fffaf0 0%, #feebc8 100%);
+}
+
+.customer-type-card .card-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.customer-type-card .card-header h4 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.customer-type-card .card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.customer-type-card .metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f7fafc;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.customer-type-card .metric:hover {
+  background: #edf2f7;
+}
+
+.customer-type-card .metric.highlight {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 700;
+}
+
+.customer-type-card .metric-label {
+  font-size: 0.9rem;
+  color: #718096;
+  font-weight: 500;
+}
+
+.customer-type-card .metric.highlight .metric-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.customer-type-card .metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.customer-type-card .metric.highlight .metric-value {
+  color: white;
+  font-size: 1.3rem;
+}
+
+.customer-type-card .card-footer {
+  padding: 1.5rem;
+  background: #f7fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.customer-type-card .card-footer p {
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  color: #4a5568;
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .customer-type-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

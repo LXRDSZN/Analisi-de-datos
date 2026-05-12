@@ -33,6 +33,7 @@ class AnalyticsService {
     // NUEVAS GRÁFICAS - Ventas
     const salesByChannel = this.calculateSalesByChannel(sales);
     const salesByDay = this.groupSalesByDay(sales);
+    const salesByCustomerType = this.calculateSalesByCustomerType(sales);
 
     // KPIs Extras
     const topChannel = this.getTopChannel(sales);
@@ -69,6 +70,7 @@ class AnalyticsService {
         // Nuevas - Ventas
         salesByChannel,
         salesByDay,
+        salesByCustomerType,
         
         lowStockItems: lowStockItems.slice(0, 10)
       },
@@ -464,6 +466,41 @@ class AnalyticsService {
     });
 
     return insights;
+  }
+
+  calculateSalesByCustomerType(sales) {
+    const registered = sales.filter(s => s.customer_id && s.customer_id !== 'null' && s.customer_id !== '');
+    const nonRegistered = sales.filter(s => !s.customer_id || s.customer_id === 'null' || s.customer_id === '');
+
+    const registeredSales = registered.reduce((sum, s) => sum + (s.total_value || 0), 0);
+    const nonRegisteredSales = nonRegistered.reduce((sum, s) => sum + (s.total_value || 0), 0);
+
+    const registeredQty = registered.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    const nonRegisteredQty = nonRegistered.reduce((sum, s) => sum + (s.quantity || 0), 0);
+
+    const totalOrders = sales.length;
+    const registeredOrders = registered.length;
+    const nonRegisteredOrders = nonRegistered.length;
+
+    const result = {
+      registered: {
+        orders: registeredOrders,
+        percentage: ((registeredOrders / totalOrders) * 100).toFixed(1),
+        totalSales: registeredSales.toFixed(2),
+        productsCount: registeredQty,
+        averageTicket: registeredOrders > 0 ? (registeredSales / registeredOrders).toFixed(2) : 0
+      },
+      nonRegistered: {
+        orders: nonRegisteredOrders,
+        percentage: ((nonRegisteredOrders / totalOrders) * 100).toFixed(1),
+        totalSales: nonRegisteredSales.toFixed(2),
+        productsCount: nonRegisteredQty,
+        averageTicket: nonRegisteredOrders > 0 ? (nonRegisteredSales / nonRegisteredOrders).toFixed(2) : 0
+      }
+    };
+
+    console.log('📊 Sales by customer type calculated:', result);
+    return result;
   }
 }
 
