@@ -28,6 +28,16 @@ const router = createRouter({
       path: '/inventory',
       name: 'inventory',
       component: () => import('@/views/Inventory/InventoryView.vue')
+    },
+    {
+      path: '/datamining',
+      name: 'datamining',
+      component: () => import('@/views/DataMining/DataMiningView.vue')
+    },
+    {
+      path: '/reports',
+      name: 'reports',
+      component: () => import('@/views/Reports/ReportsView.vue')
     }
   ]
 })

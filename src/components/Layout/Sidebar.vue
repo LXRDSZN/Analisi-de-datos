@@ -53,6 +53,24 @@
           <span v-if="!isCollapsed" class="nav-text">Inventario</span>
         </transition>
       </router-link>
+
+      <router-link to="/datamining" class="nav-item">
+        <n-icon size="22" class="nav-icon">
+          <GitNetworkOutline />
+        </n-icon>
+        <transition name="fade">
+          <span v-if="!isCollapsed" class="nav-text">Minería de Datos</span>
+        </transition>
+      </router-link>
+
+      <router-link to="/reports" class="nav-item">
+        <n-icon size="22" class="nav-icon">
+          <DocumentTextOutline />
+        </n-icon>
+        <transition name="fade">
+          <span v-if="!isCollapsed" class="nav-text">Reportes</span>
+        </transition>
+      </router-link>
     </nav>
 
     <div class="sidebar-footer">
@@ -81,6 +99,8 @@ import {
   CubeOutline,
   BarChartOutline,
   ClipboardOutline,
+  GitNetworkOutline,
+  DocumentTextOutline,
   LogOutOutline
 } from '@vicons/ionicons5';
 
