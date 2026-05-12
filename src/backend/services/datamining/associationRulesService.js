@@ -2,7 +2,7 @@ import csvService from '../csvService.js';
 
 class AssociationRulesService {
   
-  async getAssociationRules(minSupport = 0.01, minConfidence = 0.3) {
+  async getAssociationRules(minSupport = 0.001, minConfidence = 0.2) {
     const sales = await csvService.getSales();
     const products = await csvService.getProducts();
     
@@ -16,7 +16,9 @@ class AssociationRulesService {
       totalTransactions: transactions.length,
       totalRules: enrichedRules.length,
       minSupport,
-      minConfidence
+      minConfidence,
+      multiItemTransactions: transactions.filter(t => t.length > 1).length,
+      warning: enrichedRules.length === 0 ? 'No se encontraron reglas con los umbrales actuales. La mayoría de las transacciones contienen un solo producto.' : null
     };
   }
   
