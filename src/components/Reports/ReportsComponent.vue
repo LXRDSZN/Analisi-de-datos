@@ -171,6 +171,7 @@ const viewReport = async (endpoint, title, loadingKey, component) => {
     const response = await axios.get(`http://localhost:5000/api/reports/${endpoint}`, {
       withCredentials: true
     });
+    console.log(`📊 Datos recibidos de ${endpoint}:`, response.data.data);
     modalTitle.value = title;
     modalData.value = response.data.data;
     currentReportComponent.value = markRaw(component);
@@ -534,12 +535,13 @@ const generateWeeklyExecutivePDF = (doc, data, yPos, pageWidth, margin) => {
   doc.text('Reporte Ejecutivo Semanal', margin, yPos);
   yPos += 10;
 
-  // KPIs principales
+  // KPIs principales - obtener de sections.dailySales.summary
+  const summary = data.sections?.dailySales?.summary || {};
   const kpis = [
-    ['Ingresos Totales', `$${formatNumber(data.kpis?.totalRevenue || 0)}`],
-    ['Ordenes Totales', formatNumber(data.kpis?.totalOrders || 0)],
-    ['Ticket Promedio', `$${formatNumber(data.kpis?.avgTicket || 0)}`],
-    ['Productos Vendidos', formatNumber(data.kpis?.productsSold || 0)]
+    ['Ingresos Totales', `$${formatNumber(summary.totalRevenue || 0)}`],
+    ['Ordenes Totales', formatNumber(summary.totalOrders || 0)],
+    ['Ticket Promedio', `$${formatNumber(summary.averageTicket || 0)}`],
+    ['Productos Vendidos', formatNumber(summary.totalQuantity || 0)]
   ];
 
   doc.autoTable({
@@ -555,16 +557,17 @@ const generateWeeklyExecutivePDF = (doc, data, yPos, pageWidth, margin) => {
   yPos = doc.lastAutoTable.finalY + 10;
 
   // Top productos
-  if (data.topProducts && data.topProducts.length) {
+  const topProducts = data.sections?.topProducts?.products || [];
+  if (topProducts.length > 0) {
     doc.setFontSize(12);
     doc.text('Top 5 Productos', margin, yPos);
     yPos += 5;
 
-    const productData = data.topProducts.slice(0, 5).map((p, i) => [
+    const productData = topProducts.slice(0, 5).map((p, i) => [
       (i + 1).toString(),
-      p.product_name,
-      `$${formatNumber(p.revenue)}`,
-      p.quantity.toString()
+      p.product_name || 'N/A',
+      `$${formatNumber(p.revenue || 0)}`,
+      (p.quantity || 0).toString()
     ]);
 
     doc.autoTable({
@@ -581,21 +584,49 @@ const generateWeeklyExecutivePDF = (doc, data, yPos, pageWidth, margin) => {
   }
 
   // Ventas por canal
-  if (data.byChannel && data.byChannel.length) {
+  const channels = data.sections?.channelPerformance?.channels || [];
+  if (channels.length > 0) {
     doc.setFontSize(12);
     doc.text('Ventas por Canal', margin, yPos);
     yPos += 5;
 
-    const channelData = data.byChannel.map(ch => [
-      ch.channel,
-      `$${formatNumber(ch.revenue)}`,
-      ch.orders.toString()
+    const channelData = channels.map(ch => [
+      ch.channel || 'N/A',
+      `$${formatNumber(ch.totalRevenue || 0)}`,
+      (ch.orders || ch.totalOrders || 0).toString()
     ]);
 
     doc.autoTable({
       startY: yPos,
-      head: [['Canal', 'Ingresos', 'Órdenes']],
+      head: [['Canal', 'Ingresos', 'Ordenes']],
       body: channelData,
+      theme: 'grid',
+      headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      margin: { left: margin, right: margin }
+    });
+    
+    yPos = doc.lastAutoTable.finalY + 10;
+  }
+
+  // Tiendas top 5
+  const stores = data.sections?.storePerformance?.stores || [];
+  if (stores.length > 0) {
+    doc.setFontSize(12);
+    doc.text('Top 5 Tiendas', margin, yPos);
+    yPos += 5;
+
+    const storeData = stores.slice(0, 5).map((s, i) => [
+      (i + 1).toString(),
+      s.store_name || 'N/A',
+      s.city || 'N/A',
+      `$${formatNumber(s.revenue || 0)}`
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      head: [['#', 'Tienda', 'Ciudad', 'Ingresos']],
+      body: storeData,
       theme: 'grid',
       headStyles: { fillColor: [102, 126, 234], fontSize: 10, fontStyle: 'bold' },
       styles: { fontSize: 9, cellPadding: 3 },

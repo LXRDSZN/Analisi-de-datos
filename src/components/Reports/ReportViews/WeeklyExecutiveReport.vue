@@ -10,24 +10,24 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-label">Ingresos Totales</div>
-          <div class="metric-value">${{ formatNumber(getSummaryValue('totalRevenue')) }}</div>
+          <div class="metric-value">${{ formatNumber(data.sections?.dailySales?.summary?.totalRevenue || 0) }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Total Órdenes</div>
-          <div class="metric-value">{{ formatNumber(getSummaryValue('totalOrders')) }}</div>
+          <div class="metric-value">{{ formatNumber(data.sections?.dailySales?.summary?.totalOrders || 0) }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Ticket Promedio</div>
-          <div class="metric-value">${{ formatNumber(getSummaryValue('averageTicket')) }}</div>
+          <div class="metric-value">${{ formatNumber(data.sections?.dailySales?.summary?.averageTicket || 0) }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Productos Vendidos</div>
-          <div class="metric-value">{{ formatNumber(getSummaryValue('totalQuantity')) }}</div>
+          <div class="metric-value">{{ formatNumber(data.sections?.dailySales?.summary?.totalQuantity || 0) }}</div>
         </div>
       </div>
     </div>
 
-    <div class="section" v-if="data.sections?.topProducts">
+    <div class="section" v-if="data.sections?.topProducts?.products?.length">
       <h3>🏆 Top 10 Productos</h3>
       <table class="data-table">
         <thead>
@@ -40,18 +40,18 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="product in data.sections.topProducts.products" :key="product.sku_id">
+          <tr v-for="product in data.sections.topProducts.products.slice(0, 10)" :key="product.sku_id">
             <td>{{ product.rank }}</td>
-            <td>{{ product.product_name }}</td>
-            <td>{{ product.category }}</td>
-            <td>${{ formatNumber(product.revenue) }}</td>
-            <td>{{ product.quantity }}</td>
+            <td>{{ product.product_name || 'N/A' }}</td>
+            <td>{{ product.category || 'N/A' }}</td>
+            <td>${{ formatNumber(product.revenue || 0) }}</td>
+            <td>{{ formatNumber(product.quantity || 0) }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="section" v-if="data.sections?.storePerformance">
+    <div class="section" v-if="data.sections?.storePerformance?.stores?.length">
       <h3>🏪 Rendimiento por Tienda (Top 5)</h3>
       <table class="data-table">
         <thead>
@@ -65,17 +65,17 @@
         </thead>
         <tbody>
           <tr v-for="store in data.sections.storePerformance.stores.slice(0, 5)" :key="store.store_id">
-            <td>{{ store.store_name }}</td>
-            <td>{{ store.city }}</td>
-            <td>${{ formatNumber(store.revenue) }}</td>
-            <td>{{ store.orders }}</td>
-            <td>${{ formatNumber(store.averageTicket) }}</td>
+            <td>{{ store.store_name || 'N/A' }}</td>
+            <td>{{ store.city || 'N/A' }}</td>
+            <td>${{ formatNumber(store.revenue || 0) }}</td>
+            <td>{{ formatNumber(store.orders || 0) }}</td>
+            <td>${{ formatNumber(store.avgTicket || store.averageTicket || 0) }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="section" v-if="data.sections?.channelPerformance">
+    <div class="section" v-if="data.sections?.channelPerformance?.channels?.length">
       <h3>💰 Ticket Promedio por Canal</h3>
       <table class="data-table">
         <thead>
@@ -89,52 +89,52 @@
         </thead>
         <tbody>
           <tr v-for="channel in data.sections.channelPerformance.channels" :key="channel.channel">
-            <td>{{ channel.channel }}</td>
-            <td>${{ formatNumber(channel.totalRevenue) }}</td>
-            <td>{{ channel.totalOrders }}</td>
-            <td>${{ formatNumber(channel.averageTicket) }}</td>
-            <td>{{ channel.revenueShare }}%</td>
+            <td>{{ channel.channel || 'N/A' }}</td>
+            <td>${{ formatNumber(channel.totalRevenue || 0) }}</td>
+            <td>{{ formatNumber(channel.orders || channel.totalOrders || 0) }}</td>
+            <td>${{ formatNumber(channel.avgTicket || channel.averageTicket || 0) }}</td>
+            <td>{{ (channel.revenueShare || 0).toFixed(2) }}%</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="section" v-if="data.sections?.discountAnalysis">
+    <div class="section" v-if="data.sections?.discountAnalysis?.summary">
       <h3>🏷️ Análisis de Descuentos</h3>
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-label">Órdenes con Descuento</div>
-          <div class="metric-value">{{ data.sections.discountAnalysis.summary.discountPercentage }}%</div>
+          <div class="metric-value">{{ (data.sections.discountAnalysis.summary.discountPercentage || 0).toFixed(2) }}%</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Descuento Promedio</div>
-          <div class="metric-value">{{ data.sections.discountAnalysis.summary.averageDiscount }}%</div>
+          <div class="metric-value">{{ (data.sections.discountAnalysis.summary.averageDiscount || 0).toFixed(2) }}%</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Ingresos con Descuento</div>
-          <div class="metric-value">${{ formatNumber(data.sections.discountAnalysis.summary.discountRevenue) }}</div>
+          <div class="metric-value">${{ formatNumber(data.sections.discountAnalysis.summary.discountRevenue || 0) }}</div>
         </div>
       </div>
     </div>
 
-    <div class="section" v-if="data.sections?.customerRetention">
+    <div class="section" v-if="data.sections?.customerRetention?.summary">
       <h3>👥 Retención de Clientes</h3>
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-label">Clientes Totales</div>
-          <div class="metric-value">{{ formatNumber(data.sections.customerRetention.summary.totalCustomers) }}</div>
+          <div class="metric-value">{{ formatNumber(data.sections.customerRetention.summary.totalCustomers || 0) }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Clientes Recurrentes</div>
-          <div class="metric-value">{{ formatNumber(data.sections.customerRetention.summary.recurringCustomers) }}</div>
+          <div class="metric-value">{{ formatNumber(data.sections.customerRetention.summary.recurringCustomers || 0) }}</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Tasa de Recurrencia</div>
-          <div class="metric-value">{{ data.sections.customerRetention.summary.recurringRate }}%</div>
+          <div class="metric-value">{{ (data.sections.customerRetention.summary.recurringRate || 0).toFixed(2) }}%</div>
         </div>
         <div class="metric-card">
           <div class="metric-label">Clientes Leales (5+ compras)</div>
-          <div class="metric-value">{{ formatNumber(data.sections.customerRetention.summary.loyalCustomers) }}</div>
+          <div class="metric-value">{{ formatNumber(data.sections.customerRetention.summary.loyalCustomers || 0) }}</div>
         </div>
       </div>
     </div>
@@ -148,23 +148,12 @@
 <script setup>
 import { defineProps } from 'vue';
 
-defineProps({
+const props = defineProps({
   data: {
     type: Object,
     required: true
   }
 });
-
-const getSummaryValue = (key) => {
-  const data = defineProps().data;
-  if (data.sections?.dailySales?.summary?.[key] !== undefined) {
-    return data.sections.dailySales.summary[key];
-  }
-  if (data.summary?.[key] !== undefined) {
-    return data.summary[key];
-  }
-  return 0;
-};
 
 const formatNumber = (num) => {
   return new Intl.NumberFormat('es-MX', {
