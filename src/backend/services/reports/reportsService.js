@@ -204,12 +204,25 @@ class ReportsService {
     const sales = await csvService.getSales();
     const customers = await csvService.getCustomers();
     
-    // Contar compras por cliente
-    const customerPurchases = {};
+    // Agrupar por cliente + fecha + tienda + canal para identificar órdenes únicas
+    const customerOrders = {};
+    
     sales.forEach(sale => {
       if (sale.customer_id) {
-        customerPurchases[sale.customer_id] = (customerPurchases[sale.customer_id] || 0) + 1;
+        // Una orden única es: mismo cliente, mismo día, misma tienda, mismo canal
+        const orderKey = `${sale.customer_id}_${sale.date}_${sale.store_id}_${sale.channel}`;
+        
+        if (!customerOrders[sale.customer_id]) {
+          customerOrders[sale.customer_id] = new Set();
+        }
+        customerOrders[sale.customer_id].add(orderKey);
       }
+    });
+    
+    // Contar órdenes únicas por cliente
+    const customerPurchases = {};
+    Object.entries(customerOrders).forEach(([custId, orders]) => {
+      customerPurchases[custId] = orders.size;
     });
     
     // Clasificar clientes
@@ -218,9 +231,9 @@ class ReportsService {
     const loyalCustomers = [];
     
     Object.entries(customerPurchases).forEach(([custId, count]) => {
-      if (count === 1) oneTimeBuyers.push(custId);
-      else if (count >= 2 && count <= 4) recurringCustomers.push(custId);
-      else if (count >= 5) loyalCustomers.push(custId);
+      if (count <= 75) oneTimeBuyers.push(custId);
+      else if (count >= 76 && count <= 90) recurringCustomers.push(custId);
+      else if (count >= 91) loyalCustomers.push(custId);
     });
     
     // Calcular revenue por segmento
