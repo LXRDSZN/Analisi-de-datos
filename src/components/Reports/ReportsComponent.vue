@@ -272,12 +272,12 @@ const generateDailySalesPDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('📈 Resumen General', margin, yPos);
+  doc.text('Resumen General', margin, yPos);
   yPos += 10;
 
   const metrics = [
     ['Ingresos Totales', `$${formatNumber(data.summary?.totalRevenue || 0)}`],
-    ['Total de Órdenes', formatNumber(data.summary?.totalOrders || 0)],
+    ['Total de Ordenes', formatNumber(data.summary?.totalOrders || 0)],
     ['Cantidad Total', formatNumber(data.summary?.totalQuantity || 0)],
     ['Ticket Promedio', `$${formatNumber(data.summary?.averageTicket || 0)}`]
   ];
@@ -298,7 +298,7 @@ const generateDailySalesPDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('🛒 Ventas por Canal', margin, yPos);
+  doc.text('Ventas por Canal', margin, yPos);
   yPos += 5;
 
   const channelData = (data.byChannel || []).map(ch => [
@@ -324,7 +324,7 @@ const generateDailySalesPDF = (doc, data, yPos, pageWidth, margin) => {
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(102, 126, 234);
-    doc.text('🏆 Top Productos del Día', margin, yPos);
+    doc.text('Top Productos del Dia', margin, yPos);
     yPos += 5;
 
     const productData = data.topProducts.slice(0, 5).map(p => [
@@ -353,7 +353,7 @@ const generateTopProductsPDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('🏆 Top 10 Productos Más Vendidos', margin, yPos);
+  doc.text('Top 10 Productos Mas Vendidos', margin, yPos);
   yPos += 10;
 
   const productData = data.products.map(p => [
@@ -386,7 +386,7 @@ const generateStorePerformancePDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('🏪 Rendimiento por Tienda', margin, yPos);
+  doc.text('Rendimiento por Tienda', margin, yPos);
   yPos += 10;
 
   const storeData = data.stores.map(s => [
@@ -415,7 +415,7 @@ const generateChannelTicketPDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('💰 Ticket Promedio por Canal', margin, yPos);
+  doc.text('Ticket Promedio por Canal', margin, yPos);
   yPos += 10;
 
   const channelData = data.channels.map(ch => [
@@ -442,14 +442,16 @@ const generateDiscountSalesPDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('🏷️ Análisis de Ventas con Descuento', margin, yPos);
+  doc.text('Analisis de Ventas con Descuento', margin, yPos);
   yPos += 10;
 
   const summary = [
-    ['Ventas Totales', `$${formatNumber(data.summary.totalSales)}`],
-    ['Ventas con Descuento', `$${formatNumber(data.summary.salesWithDiscount)}`],
-    ['Porcentaje', `${data.summary.percentageWithDiscount}%`],
-    ['Descuento Promedio', `${data.summary.avgDiscountPercent}%`]
+    ['Ordenes Totales', (data.summary?.totalOrders || 0).toString()],
+    ['Ordenes con Descuento', (data.summary?.ordersWithDiscount || 0).toString()],
+    ['Porcentaje', `${data.summary?.discountPercentage || 0}%`],
+    ['Descuento Promedio', `${data.summary?.averageDiscount || 0}%`],
+    ['Ingresos Totales', `$${formatNumber(data.summary?.totalRevenue || 0)}`],
+    ['Ingresos con Descuento', `$${formatNumber(data.summary?.discountRevenue || 0)}`]
   ];
 
   doc.autoTable({
@@ -469,14 +471,22 @@ const generateRecurringCustomersPDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('👥 Análisis de Clientes Recurrentes', margin, yPos);
+  doc.text('Analisis de Clientes Recurrentes', margin, yPos);
   yPos += 10;
 
+  const totalPurchases = Object.values(data.summary || {}).reduce((sum, val) => {
+    return sum + (typeof val === 'number' ? val : 0);
+  }, 0);
+  
+  const avgPurchases = data.summary?.totalCustomers > 0 
+    ? (totalPurchases / data.summary.totalCustomers).toFixed(2) 
+    : '0.00';
+
   const summary = [
-    ['Total de Clientes', data.summary.totalCustomers.toString()],
-    ['Clientes Recurrentes', data.summary.recurringCustomers.toString()],
-    ['Porcentaje', `${data.summary.recurringPercentage}%`],
-    ['Compras Promedio', data.summary.avgPurchasesPerCustomer.toString()]
+    ['Total de Clientes', (data.summary?.totalCustomers || 0).toString()],
+    ['Clientes Recurrentes', (data.summary?.recurringCustomers || 0).toString()],
+    ['Tasa de Recurrencia', `${data.summary?.recurringRate || 0}%`],
+    ['Compras Promedio', avgPurchases]
   ];
 
   doc.autoTable({
@@ -521,15 +531,15 @@ const generateWeeklyExecutivePDF = (doc, data, yPos, pageWidth, margin) => {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(102, 126, 234);
-  doc.text('📋 Reporte Ejecutivo Semanal', margin, yPos);
+  doc.text('Reporte Ejecutivo Semanal', margin, yPos);
   yPos += 10;
 
   // KPIs principales
   const kpis = [
-    ['Ingresos Totales', `$${formatNumber(data.kpis.totalRevenue)}`],
-    ['Órdenes Totales', formatNumber(data.kpis.totalOrders)],
-    ['Ticket Promedio', `$${formatNumber(data.kpis.avgTicket)}`],
-    ['Productos Vendidos', formatNumber(data.kpis.productsSold)]
+    ['Ingresos Totales', `$${formatNumber(data.kpis?.totalRevenue || 0)}`],
+    ['Ordenes Totales', formatNumber(data.kpis?.totalOrders || 0)],
+    ['Ticket Promedio', `$${formatNumber(data.kpis?.avgTicket || 0)}`],
+    ['Productos Vendidos', formatNumber(data.kpis?.productsSold || 0)]
   ];
 
   doc.autoTable({
