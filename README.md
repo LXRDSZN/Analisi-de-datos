@@ -17,6 +17,25 @@
 
 ---
 
+## 📖 Descripción del Proyecto
+
+**BlueMart Analytics System** es una plataforma web de análisis de datos empresariales desarrollada para la cadena de retail **BlueMart**, con presencia en los Emiratos Árabes Unidos (Dubai, Abu Dhabi y Sharjah).
+
+El sistema centraliza y visualiza información proveniente de más de **641,000 transacciones de venta**, permitiendo a los gerentes y analistas de negocio tomar decisiones informadas a través de un dashboard interactivo, reportes por canal de venta, gestión de inventario y análisis de clientes.
+
+### 🎯 Propósito
+
+El proyecto nació de la necesidad de procesar y analizar grandes volúmenes de datos comerciales almacenados en archivos CSV, ofreciendo una interfaz moderna y accesible que reemplaza el análisis manual en hojas de cálculo.
+
+### 🔑 Valor Principal
+
+- Consolidar datos de **5 canales de venta** (tienda física, web, app móvil, Amazon y Noon) en una sola vista.
+- Monitorear el **stock de inventario en tiempo real** con alertas de reabastecimiento.
+- Identificar tendencias de ventas, productos estrella y comportamiento de clientes segmentados por membresía (Silver, Gold, Platinum).
+- Proveer una API REST segura (JWT) que puede integrarse con otros sistemas de la empresa.
+
+---
+
 ## 📋 Tabla de Contenidos
 
 - [Características Principales](#-características-principales)
